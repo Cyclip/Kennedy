@@ -1,0 +1,45 @@
+program = { function_def } , statement ;
+
+function_def = "func" , identifier , "(", [ parameter_list ] , ")" , block ;
+
+parameter_list = parameter , { "," , parameter } ;
+
+parameter = identifier , ":", type ;
+
+type = "int" | "float" | "string" | "bool" ;
+
+block = "{" , { statement } , "}" ;
+
+statement = variable_declaration | assignment | function_call | if_statement | while_loop | for_loop ;
+
+variable_declaration = "let" , identifier , ":" , type , "=" , expression , ";" ;
+
+assignment = identifier , "=" , expression , ";" ;
+
+function_call = identifier , "(", [ argument_list ] , ")" , ";" ;
+
+argument_list = expression , { "," , expression } ;
+
+if_statement = "if" , "(" , expression , ")" , block , [ "else" , ( block | if_statement ) ] ;
+
+while_loop = "while" , "(" , expression , ")" , block ;
+
+for_loop = "for" , "(" , variable_declaration , expression , ";" , assignment , ")" , block ;
+
+expression = term , { ( "+" | "-" | "*" | "/" ) , term } ;
+
+term = identifier | number | string | "true" | "false" | "(", expression , ")" ;
+
+identifier = letter , { letter | digit | "_" } ;
+
+number = digit , { digit } ;
+
+string = """ , { character } , """ ;
+
+character = letter | digit | symbol ;
+
+letter = "A" | ... | "Z" | "a" | ... | "z" ;
+
+digit = "0" | ... | "9" ;
+
+symbol = "+" | "-" | "*" | "/" | "=" | "<" | ">" | "!" | "?" | ":" | ";" | "," | "." | "(" | ")" | "{" | "}" | "[" | "]" | "'" | """ ;
