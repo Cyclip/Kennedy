@@ -1,6 +1,6 @@
 mod lexer;
-// mod parser;
-// mod ast;
+mod parser;
+pub mod ast;
 // mod codegen;
 mod error;
 

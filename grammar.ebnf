@@ -1,45 +1,68 @@
-program = { function_def } , statement ;
+(* Program consists of functions *)
+program      ::= function* ;
 
-function_def = "func" , identifier , "(", [ parameter_list ] , ")" , block ;
+(* Function is determined with a type,identifier, parameters, and block of code *)
+function     ::= "func" ident "(" ( parameters )? ")" ":" type block ;
 
-parameter_list = parameter , { "," , parameter } ;
+(* Each parameter has a type *)
+parameters   ::= parameter ( "," parameter )* ;
+parameter    ::= ident ":" type ;
 
-parameter = identifier , ":", type ;
+(* A block contains atleast 0 statements *)
+block        ::= "{" statement* "}" ;
 
-type = "int" | "float" | "string" | "bool" ;
+(* A statement can be any one of these *)
+statement    ::= variable_declaration ";" 
+               | assignment ";" 
+               | print_statement ";" 
+               | if_statement 
+               | for_statement
+               | while_statement 
+               | return_statement ";"
+               | block
+               | do_until_statement ;
 
-block = "{" , { statement } , "}" ;
+(* A variable declaration has an optional type, identifier, and an expression *)
+variable_declaration  ::= "let" ident (":" type)? "=" expression ;
 
-statement = variable_declaration | assignment | function_call | if_statement | while_loop | for_loop ;
+(* An assignment has an identifier and an expression (optional) *)
+assignment   ::= ident ( "=" expression )? ;
 
-variable_declaration = "let" , identifier , ":" , type , "=" , expression , ";" ;
+print_statement   ::= "print" "(" expression ")" ;
 
-assignment = identifier , "=" , expression , ";" ;
+(* Nested if else statements can exist *)
+if_statement  ::= "if" "(" expression ")" block ( "else" ( if_statement | block ) )? ;
 
-function_call = identifier , "(", [ argument_list ] , ")" , ";" ;
+while_statement ::= "while" "(" expression ")" block ;
 
-argument_list = expression , { "," , expression } ;
+(* For statement *)
+for_statement ::= "for" "(" ( assignment | variable_declaration ) ";" expression ";" assignment ")" block ;
 
-if_statement = "if" , "(" , expression , ")" , block , [ "else" , ( block | if_statement ) ] ;
+return_statement ::= "return" expression ;
 
-while_loop = "while" , "(" , expression , ")" , block ;
+(* These are called atleast once, compared to while loops which may be called 0 times *)
+do_until_statement ::= "do" block "until" "(" expression ")" ;
 
-for_loop = "for" , "(" , variable_declaration , expression , ";" , assignment , ")" , block ;
+(* An expression can be any one of these *)
+expression   ::= term ( ( "+" | "-" | "*" | "/" | "%" | "==" | "!=" | "<" | ">" | "<=" | ">=" | "or" | "and" ) term )* ;
+(* A term can be an:
+    - identifier
+    - number
+    - negative term
+    - expression in parentheses
+    - function call
+*)
+term         ::= ident
+               | NUMBER 
+               | "-" term 
+               | "(" expression ")" 
+               | function_call ;
 
-expression = term , { ( "+" | "-" | "*" | "/" ) , term } ;
+function_call ::= ident "(" ( arguments )? ")" ;
+arguments    ::= expression ( "," expression )* ;
 
-term = identifier | number | string | "true" | "false" | "(", expression , ")" ;
+type         ::= "int" | "float" | "string" | "bool" | "void" ;
 
-identifier = letter , { letter | digit | "_" } ;
+ident           ::= [a-zA-Z][a-zA-Z0-9_]* ;
 
-number = digit , { digit } ;
-
-string = """ , { character } , """ ;
-
-character = letter | digit | symbol ;
-
-letter = "A" | ... | "Z" | "a" | ... | "z" ;
-
-digit = "0" | ... | "9" ;
-
-symbol = "+" | "-" | "*" | "/" | "=" | "<" | ">" | "!" | "?" | ":" | ";" | "," | "." | "(" | ")" | "{" | "}" | "[" | "]" | "'" | """ ;
+NUMBER       ::= [0-9]+ ( "." [0-9]+ )? ;

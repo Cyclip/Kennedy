@@ -6,16 +6,21 @@ pub enum TokenType {
     // Single-character tokens
     LeftParen, RightParen, LeftBrace, RightBrace,       // ( ) { }
     Comma, Dot, Minus, Plus, Semicolon, Slash, Star,    // , . - + ; / *
+    Colon,                                              // :
     // One or two character tokens
     Bang, BangEqual,                                  // ! !=
     Equal, EqualEqual,                                // = ==
     Greater, GreaterEqual,                            // > >=
     Less, LessEqual,                                  // < <=
+    PlusPlus, MinusMinus,                             // ++ --
+    StarStar, SlashSlash,                             // ** //
+    PlusEqual, MinusEqual,                            // += -=
+    StarEqual, SlashEqual,                            // *= /=
     // Literals
     StringLiteral(String),                            // "..."
     IntegerLiteral(i64),                              // 123
     FloatLiteral(f64),                                // 123.456
-    Identifier(String),                               // ...
+    Ident(String),                               // ...
     // Keywords
     Function, Let, If, Else, While, Return,            // function let if else while return
     True, False,                                      // true false

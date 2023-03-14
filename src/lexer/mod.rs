@@ -43,10 +43,8 @@ pub fn lex(source: String) -> CompileResult<Vec<Token>> {
             '}' => add_token(TokenType::RightBrace, &mut tokens, start_char, current_char),
             ',' => add_token(TokenType::Comma, &mut tokens, start_char, current_char),
             '.' => add_token(TokenType::Dot, &mut tokens, start_char, current_char),
-            '-' => add_token(TokenType::Minus, &mut tokens, start_char, current_char),
-            '+' => add_token(TokenType::Plus, &mut tokens, start_char, current_char),
             ';' => add_token(TokenType::Semicolon, &mut tokens, start_char, current_char),
-            '*' => add_token(TokenType::Star, &mut tokens, start_char, current_char),
+            ':' => add_token(TokenType::Colon, &mut tokens, start_char, current_char),
             // One or two character tokens
             '!' => {
                 // check for != next char
@@ -90,6 +88,95 @@ pub fn lex(source: String) -> CompileResult<Vec<Token>> {
                     add_token(TokenType::GreaterEqual, &mut tokens, start_char, current_char);
                 } else {
                     add_token(TokenType::Greater, &mut tokens, start_char, current_char);
+                }
+            },
+            // Comments
+            '/' => {
+                // check for // or /* next char
+                if let Some('/') = chars.peek() {
+                    // consume the next char
+                    chars.next();
+                    current_char += 1;
+                    // consume the rest of the line
+                    while let Some(c) = chars.next() {
+                        current_char += 1;
+                        if c == '\n' {
+                            break;
+                        }
+                    }
+                } else if let Some('*') = chars.peek() {
+                    // consume the next char
+                    chars.next();
+                    current_char += 1;
+                    // consume the rest of the comment
+                    while let Some(c) = chars.next() {
+                        current_char += 1;
+                        if c == '*' {
+                            if let Some('/') = chars.peek() {
+                                // consume the next char
+                                chars.next();
+                                current_char += 1;
+                                break;
+                            }
+                        }
+                    }
+                } else {
+                    add_token(TokenType::Slash, &mut tokens, start_char, current_char);
+                }
+            },
+            // ++, --, +=, -=, *=, /=
+            '+' => {
+                // check for ++ next char
+                if let Some('+') = chars.peek() {
+                    // consume the next char
+                    chars.next();
+                    current_char += 1;
+                    add_token(TokenType::PlusPlus, &mut tokens, start_char, current_char);
+                } else if let Some('=') = chars.peek() {
+                    // consume the next char
+                    chars.next();
+                    current_char += 1;
+                    add_token(TokenType::PlusEqual, &mut tokens, start_char, current_char);
+                } else {
+                    add_token(TokenType::Plus, &mut tokens, start_char, current_char);
+                }
+            },
+            '-' => {
+                // check for -- next char
+                if let Some('-') = chars.peek() {
+                    // consume the next char
+                    chars.next();
+                    current_char += 1;
+                    add_token(TokenType::MinusMinus, &mut tokens, start_char, current_char);
+                } else if let Some('=') = chars.peek() {
+                    // consume the next char
+                    chars.next();
+                    current_char += 1;
+                    add_token(TokenType::MinusEqual, &mut tokens, start_char, current_char);
+                } else {
+                    add_token(TokenType::Minus, &mut tokens, start_char, current_char);
+                }
+            },
+            '*' => {
+                // check for *= next char
+                if let Some('=') = chars.peek() {
+                    // consume the next char
+                    chars.next();
+                    current_char += 1;
+                    add_token(TokenType::StarEqual, &mut tokens, start_char, current_char);
+                } else {
+                    add_token(TokenType::Star, &mut tokens, start_char, current_char);
+                }
+            },
+            '/' => {
+                // check for /= next char
+                if let Some('=') = chars.peek() {
+                    // consume the next char
+                    chars.next();
+                    current_char += 1;
+                    add_token(TokenType::SlashEqual, &mut tokens, start_char, current_char);
+                } else {
+                    add_token(TokenType::Slash, &mut tokens, start_char, current_char);
                 }
             },
 
@@ -159,7 +246,7 @@ pub fn lex(source: String) -> CompileResult<Vec<Token>> {
                     "true" => add_token(TokenType::True, &mut tokens, start_char, current_char),
                     "let" => add_token(TokenType::Let, &mut tokens, start_char, current_char),
                     "while" => add_token(TokenType::While, &mut tokens, start_char, current_char),
-                    _ => add_token(TokenType::Identifier(identifier), &mut tokens, start_char, current_char),
+                    _ => add_token(TokenType::Ident(identifier), &mut tokens, start_char, current_char),
                 }
             },
 
@@ -184,7 +271,7 @@ mod tests {
 
     #[test]
     fn test_lexer() {
-        let source = r#"let a = 1 + 2 * 3;"#;
+        let source = r#"let a = 1 + 2 * 3; a += 1;"#;
         let tokens = lex(source.to_string()).unwrap();
         println!("{:#?}", tokens);
 
