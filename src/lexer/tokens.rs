@@ -24,6 +24,8 @@ pub enum TokenType {
     // Keywords
     Function, Let, If, Else, While, Return,            // function let if else while return
     True, False,                                      // true false
+    For, Do, Until,                                   // for do until
+    Or, And, Not,                                     // or and not
     // Types
     Int, Float, Bool, String, Null,                   // int float bool string null
     // End of file

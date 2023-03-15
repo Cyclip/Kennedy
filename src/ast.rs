@@ -1,7 +1,9 @@
+#[derive(Debug, Clone, PartialEq)]
 pub struct Program {
     pub functions: Vec<Function>,
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct Function {
     // ident
     pub ident: String,
@@ -13,23 +15,28 @@ pub struct Function {
     pub body: Block,
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct Parameters {
     pub params: Vec<Parameter>,
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct Parameter {
     pub ident: String,
     pub param_type: Type,
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct Block {
     pub statements: Vec<Statement>,
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub enum Statement {
     // variable decl
-    Let {
+    VariableDeclaration {
         ident: String,
+        var_type: Option<Type>,
         value: Expression,
     },
     // variable assign
@@ -39,7 +46,11 @@ pub enum Statement {
     },
     // return 1;
     Return {
-        value: Expression,
+        value: Option<Expression>,
+    },
+    /// { ... }
+    Block {
+        block: Box<Block>,
     },
     // if (x) { 1; } else { 2; }
     If {
@@ -50,11 +61,7 @@ pub enum Statement {
     // while (x) { 1; }
     While {
         condition: Expression,
-        body: Box<Statement>,
-    },
-    // { 1; 2; }
-    Block {
-        block: Block,
+        body: Block,
     },
     // 1;
     Expression {
@@ -64,8 +71,15 @@ pub enum Statement {
         condition: Expression,
         body: Box<Statement>,
     },
+    For {
+        init: Box<Statement>,
+        condition: Expression,
+        increment: Box<Statement>,
+        body: Block,
+    },
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub enum Expression {
     // 1
     IntegerLiteral {
@@ -133,15 +147,16 @@ pub enum Expression {
     },
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub enum Type {
     Int,
     Float,
     Bool,
     String,
     Null,
-    Void,
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub enum BinaryOperator {
     Plus,
     Minus,
@@ -155,23 +170,29 @@ pub enum BinaryOperator {
     GreaterEqual,
     Less,
     LessEqual,
+    Or,
+    And,
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub enum UnaryOperator {
     Minus,
     Bang,
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub enum PostfixOperator {
     PlusPlus,
     MinusMinus,
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub enum PrefixOperator {
     PlusPlus,
     MinusMinus,
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub enum AssignOperator {
     PlusEqual,
     MinusEqual,

@@ -54,7 +54,9 @@ expression   ::= term ( ( "+" | "-" | "*" | "/" | "%" | "==" | "!=" | "<" | ">" 
 *)
 term         ::= ident
                | NUMBER 
-               | "-" term 
+               | ( "-" | "!" ) term
+               | term ( "^" term )*
+               
                | "(" expression ")" 
                | function_call ;
 

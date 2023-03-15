@@ -35,7 +35,7 @@ pub fn lex(source: String) -> CompileResult<Vec<Token>> {
 
         match c {
             // whitespace
-            ' ' | '\r' | '\t' => {},
+            ' ' | '\r' | '\t' | '\n' => {},
             // Single-character tokens
             '(' => add_token(TokenType::LeftParen, &mut tokens, start_char, current_char),
             ')' => add_token(TokenType::RightParen, &mut tokens, start_char, current_char),
@@ -246,6 +246,23 @@ pub fn lex(source: String) -> CompileResult<Vec<Token>> {
                     "true" => add_token(TokenType::True, &mut tokens, start_char, current_char),
                     "let" => add_token(TokenType::Let, &mut tokens, start_char, current_char),
                     "while" => add_token(TokenType::While, &mut tokens, start_char, current_char),
+                    "for" => add_token(TokenType::For, &mut tokens, start_char, current_char),
+                    "func" => add_token(TokenType::Function, &mut tokens, start_char, current_char),
+                    // types
+                    "int" => add_token(TokenType::Int, &mut tokens, start_char, current_char),
+                    "float" => add_token(TokenType::Float, &mut tokens, start_char, current_char),
+                    "string" => add_token(TokenType::String, &mut tokens, start_char, current_char),
+                    "bool" => add_token(TokenType::Bool, &mut tokens, start_char, current_char),
+                    "null" => add_token(TokenType::Null, &mut tokens, start_char, current_char),
+                    // "break" => add_token(TokenType::Break, &mut tokens, start_char, current_char),
+                    // "continue" => add_token(TokenType::Continue, &mut tokens, start_char, current_char),
+                    "do" => add_token(TokenType::Do, &mut tokens, start_char, current_char),
+                    "until" => add_token(TokenType::Until, &mut tokens, start_char, current_char),
+                    "false" => add_token(TokenType::False, &mut tokens, start_char, current_char),
+                    "true" => add_token(TokenType::True, &mut tokens, start_char, current_char),
+                    "or" => add_token(TokenType::Or, &mut tokens, start_char, current_char),
+                    "and" => add_token(TokenType::And, &mut tokens, start_char, current_char),
+                    "not" => add_token(TokenType::Not, &mut tokens, start_char, current_char),
                     _ => add_token(TokenType::Ident(identifier), &mut tokens, start_char, current_char),
                 }
             },
@@ -261,6 +278,14 @@ pub fn lex(source: String) -> CompileResult<Vec<Token>> {
             }
         };
     };
+
+    tokens.push(Token {
+        token_type: TokenType::Eof,
+        span: Span {
+            start: current_char,
+            end: current_char,
+        },
+    });
 
     Ok(tokens)
 }
