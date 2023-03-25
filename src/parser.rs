@@ -60,14 +60,14 @@ impl Parser {
     fn consume(&mut self, token_type: TokenType) -> CompileResult<Token> {
         let token = self.peek().clone();
 
-        if self.match_advance(token_type) {
+        if self.match_advance(token_type.clone()) {
             Ok(self.previous().clone())
         } else {
             Err(
                 CompileError::SyntaxError(
                     format!(
-                        "Expected token {:?}, got {:?}",
-                        token,
+                        "Expected token {}, got {}",
+                        &token_type,
                         self.peek()
                     ),
                     self.peek().span.clone(),
@@ -432,20 +432,33 @@ impl Parser {
 
         let mut left = self.parse_unary()?;
 
-        while self.match_peek(TokenType::Plus) || self.match_peek(TokenType::Minus) {
-            let op = self.consume(TokenType::Plus)?;
-            let right = self.parse_unary()?;
-            
+        // while we have a binary operator, parse the right side of the expression
+        while self.match_peek(TokenType::Plus) || self.match_peek(TokenType::Minus)
+        || self.match_peek(TokenType::Star) || self.match_peek(TokenType::Slash)
+         {
+            println!("Reached {:?}", self.peek().token_type);
+            let operator = match self.peek() {
+                Token { token_type: TokenType::Plus, .. } => BinaryOperator::Plus,
+                Token { token_type: TokenType::Minus, .. } => BinaryOperator::Minus,
+                Token { token_type: TokenType::Star, .. } => BinaryOperator::Star,
+                Token { token_type: TokenType::Slash, .. } => BinaryOperator::Slash,
+                _ => {
+                    // no binary operator, return the expression
+                    return Ok(left);
+                }
+            };
+
+            println!("Operator: {:?}", operator);
+
+            let right = self.parse_expression()?;
             left = Expression::Binary {
                 left: Box::new(left),
-                operator: match op.token_type {
-                    TokenType::Plus => BinaryOperator::Plus,
-                    TokenType::Minus => BinaryOperator::Minus,
-                    _ => unreachable!(),
-                },
+                operator,
                 right: Box::new(right),
             };
         }
+
+        println!("Parsed expression: {:?}", left);
 
         Ok(left)
     }
@@ -455,8 +468,9 @@ impl Parser {
     fn parse_unary(&mut self) -> CompileResult<Expression> {
         println!("Parsing unary expression, current token: {:?} (pos {})", self.peek(), self.current);
 
-        if self.match_peek(TokenType::Minus) {
-            let operator = match self.consume(TokenType::Minus)? {
+        // May have a -, +, or ! operator
+        if self.match_peek(TokenType::Plus) || self.match_peek(TokenType::Minus) || self.match_peek(TokenType::Bang) {
+            let operator = match self.consume(TokenType::Plus)? {
                 Token { token_type: TokenType::Minus, .. } => UnaryOperator::Minus,
                 Token { token_type: TokenType::Bang, .. } => UnaryOperator::Bang,
                 _ => {
@@ -466,8 +480,9 @@ impl Parser {
                     ))
                 }
             };
-            
+
             let right = self.parse_unary()?;
+            println!("Parsed unary expression: {:?}", right);
             Ok(Expression::Unary {
                 operator,
                 right: Box::new(right),
@@ -598,14 +613,13 @@ mod tests {
 
     #[test]
     fn test_parse() {
-        let source = r#"
-            func main(): int {
-                return 1 + 1;
-            }
+        let source = r#"func main(): int {
+    return 1 + 2 * 3;
+}
         "#;
 
         // tokenize
-        let mut lexer = lexer::lex(source.to_string());
+        let lexer = lexer::lex(source.to_string());
 
         let lexer = match lexer {
             Ok(lexer) => Some(lexer),
@@ -619,6 +633,9 @@ mod tests {
         let mut parser = crate::parser::Parser::new(lexer.unwrap());
         let ast = parser.parse();
 
-        println!("{:#?}", ast);
+        match ast {
+            Ok(ast) => println!("AST: {:#?}", ast),
+            Err(e) => println!("Error: {}", e.to_string_with_source(source)),
+        }
     }
 }
