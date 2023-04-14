@@ -425,67 +425,191 @@ impl Parser {
         Ok(Statement::Expression { expression: expr })
     }
 
+    /// Parse an ident
+    /// i.e. `foo`
+    fn parse_ident(&mut self) -> CompileResult<String> {
+        println!("Parsing ident, current token: {:?} (pos {})", self.peek(), self.current);
+
+        match &self.peek().token_type {
+            TokenType::Ident(x) => {
+                let token = self.consume(TokenType::Ident(x.clone()))?;
+                Ok(match token.token_type {
+                    TokenType::Ident(x) => x,
+                    _ => unreachable!(),
+                })
+            }
+            _ => Err(CompileError::SyntaxError(
+                format!("Expected ident, got {:?}", self.peek().token_type),
+                self.peek().span.clone(),
+            )),
+        }
+    }
+
+    /// Parse a type
+    /// i.e. `int`
+    fn parse_type(&mut self) -> CompileResult<Type> {
+        println!("Parsing type, current token: {:?} (pos {})", self.peek(), self.current);
+
+        match self.peek().token_type {
+            TokenType::Int => {
+                self.consume(TokenType::Int)?;
+                Ok(Type::Int)
+            }
+            TokenType::Float => {
+                self.consume(TokenType::Float)?;
+                Ok(Type::Float)
+            }
+            TokenType::String => {
+                self.consume(TokenType::String)?;
+                Ok(Type::String)
+            }
+            TokenType::Bool => {
+                self.consume(TokenType::Bool)?;
+                Ok(Type::Bool)
+            }
+            TokenType::Null => {
+                self.consume(TokenType::Null)?;
+                Ok(Type::Null)
+            }
+
+            _ => Err(CompileError::SyntaxError(
+                format!("Expected type, got {:?}", self.peek().token_type),
+                self.peek().span.clone(),
+            )),
+        }
+    }
+
     /// Parse an expression
-    /// Precedence climbing is used to parse expressions
+    /// May be a binary expression, unary expression, or a literal
+    /// i.e. `1 + 1`
     fn parse_expression(&mut self) -> CompileResult<Expression> {
         println!("Parsing expression, current token: {:?} (pos {})", self.peek(), self.current);
 
-        let mut left = self.parse_unary()?;
+        // first we parse the left hand side
+        let lhs = self.parse_term()?;
 
-        // while we have a binary operator, parse the right side of the expression
-        while self.match_peek(TokenType::Plus) || self.match_peek(TokenType::Minus)
-        || self.match_peek(TokenType::Star) || self.match_peek(TokenType::Slash)
-         {
-            println!("Reached {:?}", self.peek().token_type);
-            let operator = match self.peek() {
-                Token { token_type: TokenType::Plus, .. } => BinaryOperator::Plus,
-                Token { token_type: TokenType::Minus, .. } => BinaryOperator::Minus,
-                Token { token_type: TokenType::Star, .. } => BinaryOperator::Star,
-                Token { token_type: TokenType::Slash, .. } => BinaryOperator::Slash,
-                _ => {
-                    // no binary operator, return the expression
-                    return Ok(left);
-                }
+        // if the next token is an operator, we parse the right hand side
+        // and return a binary expression
+        if self.match_peek(TokenType::Plus)
+            || self.match_peek(TokenType::Minus)
+            || self.match_peek(TokenType::Star)
+            || self.match_peek(TokenType::Slash)
+            || self.match_peek(TokenType::EqualEqual)
+            || self.match_peek(TokenType::BangEqual)
+            || self.match_peek(TokenType::Greater)
+            || self.match_peek(TokenType::GreaterEqual)
+            || self.match_peek(TokenType::Less)
+            || self.match_peek(TokenType::LessEqual)
+        {
+            let op = self.consume(self.peek().token_type.clone())?;
+            let op_btoken = match op.token_type {
+                TokenType::Plus => BinaryOperator::Plus,
+                TokenType::Minus => BinaryOperator::Minus,
+                TokenType::Star => BinaryOperator::Star,
+                TokenType::Slash => BinaryOperator::Slash,
+                TokenType::EqualEqual => BinaryOperator::EqualEqual,
+                TokenType::BangEqual => BinaryOperator::BangEqual,
+                TokenType::Greater => BinaryOperator::Greater,
+                TokenType::GreaterEqual => BinaryOperator::GreaterEqual,
+                TokenType::Less => BinaryOperator::Less,
+                TokenType::LessEqual => BinaryOperator::LessEqual,
+                _ => unreachable!(),
             };
 
-            println!("Operator: {:?}", operator);
+            let rhs = self.parse_expression()?;
 
-            let right = self.parse_expression()?;
-            left = Expression::Binary {
-                left: Box::new(left),
-                operator,
-                right: Box::new(right),
-            };
+            Ok(Expression::Binary {
+                left: Box::new(lhs),
+                operator: op_btoken,
+                right: Box::new(rhs),
+            })
+        } else {
+            Ok(lhs)
         }
+    }
 
-        println!("Parsed expression: {:?}", left);
+    /// Parse a term
+    /// May have + or - in front of it
+    /// i.e. `1 + 1`
+    fn parse_term(&mut self) -> CompileResult<Expression> {
+        println!("Parsing term, current token: {:?} (pos {})", self.peek(), self.current);
 
-        Ok(left)
+        // first we parse the left hand side
+        let lhs = self.parse_factor()?;
+
+        // if the next token is an operator, we parse the right hand side
+        // and return a binary expression
+        if self.match_peek(TokenType::Plus) || self.match_peek(TokenType::Minus) {
+            let op = self.consume(self.peek().token_type.clone())?;
+            let op_btoken = match op.token_type {
+                TokenType::Plus => BinaryOperator::Plus,
+                TokenType::Minus => BinaryOperator::Minus,
+                _ => unreachable!(),
+            };
+
+            let rhs = self.parse_term()?;
+
+            Ok(Expression::Binary {
+                left: Box::new(lhs),
+                operator: op_btoken,
+                right: Box::new(rhs),
+            })
+        } else {
+            Ok(lhs)
+        }
+    }
+
+    /// Parse a factor
+    /// May have * or / in front of it
+    /// i.e. `1 * 1`
+    fn parse_factor(&mut self) -> CompileResult<Expression> {
+        println!("Parsing factor, current token: {:?} (pos {})", self.peek(), self.current);
+
+        // first we parse the left hand side
+        let lhs = self.parse_unary()?;
+
+        // if the next token is an operator, we parse the right hand side
+        // and return a binary expression
+        if self.match_peek(TokenType::Star) || self.match_peek(TokenType::Slash) {
+            let op = self.consume(self.peek().token_type.clone())?;
+            let op_btoken = match op.token_type {
+                TokenType::Star => BinaryOperator::Star,
+                TokenType::Slash => BinaryOperator::Slash,
+                _ => unreachable!(),
+            };
+
+            let rhs = self.parse_factor()?;
+
+            Ok(Expression::Binary {
+                left: Box::new(lhs),
+                operator: op_btoken,
+                right: Box::new(rhs),
+            })
+        } else {
+            Ok(lhs)
+        }
     }
 
     /// Parse a unary expression
+    /// May have +, -, or ! in front of it
     /// i.e. `-1`
     fn parse_unary(&mut self) -> CompileResult<Expression> {
-        println!("Parsing unary expression, current token: {:?} (pos {})", self.peek(), self.current);
+        println!("Parsing unary, current token: {:?} (pos {})", self.peek(), self.current);
 
-        // May have a -, +, or ! operator
-        if self.match_peek(TokenType::Plus) || self.match_peek(TokenType::Minus) || self.match_peek(TokenType::Bang) {
-            let operator = match self.consume(TokenType::Plus)? {
-                Token { token_type: TokenType::Minus, .. } => UnaryOperator::Minus,
-                Token { token_type: TokenType::Bang, .. } => UnaryOperator::Bang,
-                _ => {
-                    return Err(CompileError::SyntaxError(
-                        format!("Expected unary operator, got {:?}", self.peek().token_type),
-                        self.peek().span.clone(),
-                    ))
-                }
+        if self.match_peek(TokenType::Bang) || self.match_peek(TokenType::Minus)
+         {
+            let op = self.consume(self.peek().token_type.clone())?;
+            let op_utoken = match op.token_type {
+                TokenType::Minus => UnaryOperator::Minus,
+                TokenType::Bang => UnaryOperator::Bang,
+                _ => unreachable!(),
             };
 
-            let right = self.parse_unary()?;
-            println!("Parsed unary expression: {:?}", right);
+            let rhs = self.parse_unary()?;
+
             Ok(Expression::Unary {
-                operator,
-                right: Box::new(right),
+                operator: op_utoken,
+                right: Box::new(rhs),
             })
         } else {
             self.parse_primary()
@@ -493,9 +617,10 @@ impl Parser {
     }
 
     /// Parse a primary expression
-    /// i.e. `1 + 1`
+    /// Can be a literal, a parenthesized expression, or a variable
+    /// i.e. `1`, `(1 + 1)`, `foo`
     fn parse_primary(&mut self) -> CompileResult<Expression> {
-        println!("Parsing primary expression, current token: {:?} (pos {})", self.peek(), self.current);
+        println!("Parsing primary, current token: {:?} (pos {})", self.peek(), self.current);
 
         match &self.peek().token_type {
             TokenType::IntegerLiteral(x) => {
@@ -547,60 +672,6 @@ impl Parser {
 
             _ => Err(CompileError::SyntaxError(
                 format!("Expected primary expression, got {:?}", self.peek().token_type),
-                self.peek().span.clone(),
-            )),
-        }
-    }
-
-    /// Parse an ident
-    /// i.e. `foo`
-    fn parse_ident(&mut self) -> CompileResult<String> {
-        println!("Parsing ident, current token: {:?} (pos {})", self.peek(), self.current);
-
-        match &self.peek().token_type {
-            TokenType::Ident(x) => {
-                let token = self.consume(TokenType::Ident(x.clone()))?;
-                Ok(match token.token_type {
-                    TokenType::Ident(x) => x,
-                    _ => unreachable!(),
-                })
-            }
-            _ => Err(CompileError::SyntaxError(
-                format!("Expected ident, got {:?}", self.peek().token_type),
-                self.peek().span.clone(),
-            )),
-        }
-    }
-
-    /// Parse a type
-    /// i.e. `int`
-    fn parse_type(&mut self) -> CompileResult<Type> {
-        println!("Parsing type, current token: {:?} (pos {})", self.peek(), self.current);
-
-        match self.peek().token_type {
-            TokenType::Int => {
-                self.consume(TokenType::Int)?;
-                Ok(Type::Int)
-            }
-            TokenType::Float => {
-                self.consume(TokenType::Float)?;
-                Ok(Type::Float)
-            }
-            TokenType::String => {
-                self.consume(TokenType::String)?;
-                Ok(Type::String)
-            }
-            TokenType::Bool => {
-                self.consume(TokenType::Bool)?;
-                Ok(Type::Bool)
-            }
-            TokenType::Null => {
-                self.consume(TokenType::Null)?;
-                Ok(Type::Null)
-            }
-
-            _ => Err(CompileError::SyntaxError(
-                format!("Expected type, got {:?}", self.peek().token_type),
                 self.peek().span.clone(),
             )),
         }
