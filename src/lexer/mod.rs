@@ -10,10 +10,12 @@ pub use tokens::{
     TokenType
 };
 
+#[allow(dead_code)]
 /// Lex a source string into a list of tokens
 pub fn lex(source: String) -> CompileResult<Vec<Token>> {
     let mut chars = source.chars().peekable();
     let mut tokens = Vec::new();
+    #[allow(dead_code, unused_assignments)]
     let mut start_char = 0;
     let mut current_char = 0;
 
@@ -168,17 +170,17 @@ pub fn lex(source: String) -> CompileResult<Vec<Token>> {
                     add_token(TokenType::Star, &mut tokens, start_char, current_char);
                 }
             },
-            '/' => {
-                // check for /= next char
-                if let Some('=') = chars.peek() {
-                    // consume the next char
-                    chars.next();
-                    current_char += 1;
-                    add_token(TokenType::SlashEqual, &mut tokens, start_char, current_char);
-                } else {
-                    add_token(TokenType::Slash, &mut tokens, start_char, current_char);
-                }
-            },
+            // '/' => {
+            //     // check for /= next char
+            //     if let Some('=') = chars.peek() {
+            //         // consume the next char
+            //         chars.next();
+            //         current_char += 1;
+            //         add_token(TokenType::SlashEqual, &mut tokens, start_char, current_char);
+            //     } else {
+            //         add_token(TokenType::Slash, &mut tokens, start_char, current_char);
+            //     }
+            // },
 
             // string literal?
             '"' => {
@@ -240,10 +242,8 @@ pub fn lex(source: String) -> CompileResult<Vec<Token>> {
                 }
                 match identifier.as_str() {
                     "else" => add_token(TokenType::Else, &mut tokens, start_char, current_char),
-                    "false" => add_token(TokenType::False, &mut tokens, start_char, current_char),
                     "if" => add_token(TokenType::If, &mut tokens, start_char, current_char),
                     "return" => add_token(TokenType::Return, &mut tokens, start_char, current_char),
-                    "true" => add_token(TokenType::True, &mut tokens, start_char, current_char),
                     "let" => add_token(TokenType::Let, &mut tokens, start_char, current_char),
                     "while" => add_token(TokenType::While, &mut tokens, start_char, current_char),
                     "for" => add_token(TokenType::For, &mut tokens, start_char, current_char),

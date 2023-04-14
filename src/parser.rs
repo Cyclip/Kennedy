@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::ast::{
     Program, Function, Parameters, Parameter, Block, Statement, Expression, Type,
     BinaryOperator, UnaryOperator,
@@ -5,7 +7,6 @@ use crate::ast::{
 
 use crate::lexer::tokens::{Token, TokenType};
 use crate::error::{CompileError, CompileResult};
-use crate::precedence::Precedence;
 
 pub struct Parser {
     tokens: Vec<Token>,
@@ -58,7 +59,7 @@ impl Parser {
     /// If the current token is not the given token type, return an error
     /// Otherwise, return the current token
     fn consume(&mut self, token_type: TokenType) -> CompileResult<Token> {
-        let token = self.peek().clone();
+        // let token = self.peek().clone();
 
         if self.match_advance(token_type.clone()) {
             Ok(self.previous().clone())
@@ -685,7 +686,7 @@ mod tests {
     #[test]
     fn test_parse() {
         let source = r#"func main(): int {
-    return 1 + 2 * 3;
+    return 1 * (2 + 3);
 }
         "#;
 
