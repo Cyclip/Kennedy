@@ -1,3 +1,5 @@
+pub mod symbol_table;
+
 use cranelift::codegen::{
     ir::{
         types::{F32, I32, I64},
@@ -16,7 +18,7 @@ use cranelift::codegen::{
 };
 
 use cranelift::prelude::*;
-use cranelift_module::{DataContext, Module};
+use cranelift_module::{DataContext, Module, Linkage};
 
 use crate::error::{
     CompileError,
@@ -28,6 +30,10 @@ use cranelift_jit::{JITBuilder, JITModule};
 use target_lexicon::Triple; // target triple (for target ISA)
 
 use crate::ast;
+use crate::parser::Parser;
+use crate::lexer::lex;
+
+pub type Compiled = Result<*const u8, String>;
 
 pub struct Compiler {
     /// Basic function builder context. This is the main context that we use to
@@ -84,5 +90,77 @@ impl Default for Compiler {
             data_ctx: DataContext::new(),
             module,
         }
+    }
+}
+
+
+impl Compiler {
+    pub fn compile(&mut self, source: &str) -> Compiled {
+        let tokens = lex(source.to_string()).unwrap();
+        let mut parser = Parser::new(tokens);
+        let ast = parser.parse().unwrap();
+
+        for function in ast.functions {
+            self.compile_function(function)?;
+        };
+    }
+
+    /// Compile and return a function
+    fn compile_function(
+        &mut self,
+        function: ast::Function,
+    ) -> Compiled {
+        // Create a new function builder
+        let mut builder = FunctionBuilder::new(&mut self.ctx.func, &mut self.builder_context);
+
+        // Create the function signature
+        let mut sig = Signature::new(CallConv::SystemV);
+
+        // Add parameters
+        for param in function.params.params {
+            let ty = match param.param_type {
+                ast::Type::Int => I64,
+                ast::Type::Float => F32,
+                _ => panic!("Unsupported type"),
+            };
+
+            sig.params.push(AbiParam::new(ty));
+        };
+
+        // Add return type
+        match function.return_type {
+            ast::Type::Int => sig.returns.push(AbiParam::new(I64)),
+            ast::Type::Float => sig.returns.push(AbiParam::new(F32)),
+            ast::Type::Null => (),
+            _ => panic!("Unsupported type"),
+        };
+
+        // Create the function
+        let func_id = self.module.declare_function(
+            &function.ident,
+            Linkage::Export,
+            &sig,
+        ).map_err(|e| e.to_string())?;
+    
+        // Create the function context
+        let mut func_ctx = FunctionBuilderContext::new();
+        let mut func_builder = FunctionBuilder::new(&mut self.ctx.func, &mut func_ctx);
+
+        // Create the entry block
+        // This is the first block that will be executed when the function is called
+        let entry_block = func_builder.create_block();
+
+        // Since this is the entry block, add block parameters
+        // according to the function parameters
+        func_builder.append_block_params_for_function_params(entry_block);
+
+        // Set the insertion point to the entry block
+        // Tells the builder to insert instructions at the end of the entry block
+        func_builder.switch_to_block(entry_block);
+
+        // Now we can start adding instructions to the entry block
+        // First, we need to create a stack frame
+        // This is where the function's local variables will be stored
+        
     }
 }

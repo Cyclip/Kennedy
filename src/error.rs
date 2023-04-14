@@ -10,6 +10,7 @@ pub struct Span {
 pub enum CompileError {
     SyntaxError(String, Span),
     SemanticError(String, Span),
+    CompileError(String),
 }
 
 impl fmt::Display for CompileError {
